@@ -14,7 +14,8 @@
   },
   "devDependencies": {},
   "scripts": {
-    "test": "welcome to the game"
+    "test": "welcome to the game",
+    "start": "node index.js"
   },
   "keywords": [
     "poker",
