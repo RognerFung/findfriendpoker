@@ -14,7 +14,10 @@
   },
   "devDependencies": {},
   "scripts": {
-    "test": "welcome to the game"
+    "start": "node index.js",
+    "e2e": "repo-tools test deploy",
+    "test": "repo-tools test app",
+    "cover": "nyc --cache npm test; nyc report --reporter=html"
   },
   "keywords": [
     "poker",
@@ -24,6 +27,6 @@
   "license": "ISC",
   "repository": {
     "type": "git",
-    "url": "a poker game"
+    "url": "https://github.com/RognerFung/findfriendpoker"
   }
 }
