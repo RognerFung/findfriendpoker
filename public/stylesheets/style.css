@@ -1,0 +1,329 @@
+h1, h2 {
+	text-align: center;
+	font-family: arial;
+}
+button {
+	width: 80px;
+	height: 30px;
+	font-size: 20px;
+	font-family: arial;
+}
+input {
+	width: 200px;
+	height: 30px;
+	font-size: 20px;
+	font-family: arial;
+}
+select {
+	width: 80px;
+	height: 30px;
+	font-size: 20px;
+	font-family: arial;
+}
+#login {
+	position: absolute;
+	top: 100px;
+	left: 600px;
+}
+.room {
+	float: left;
+	width: 200px;
+	height: 200px;
+}
+.tableArea {
+	position: relative;
+	top: 50px;
+	left: 50px;
+	width: 100px; 
+	height: 100px;
+}
+.seat1 {
+	position: relative;
+	top: -90px;
+	left: 85px;
+	width: 30px; 
+	height: 30px;
+}
+.seat2 {
+	position: relative;
+	top: -80px;
+	left: 160px;
+	width: 30px; 
+	height: 30px;
+}
+.seat3 {
+	position: relative;
+	top: 0px;
+	left: 130px;
+	width: 30px; 
+	height: 30px;
+}
+.seat4 {
+	position: relative;
+	top: -30px;
+	left: 40px;
+	width: 30px; 
+	height: 30px;
+}
+.seat5 {
+	position: relative;
+	top: -170px;
+	left: 10px;
+	width: 30px; 
+	height: 30px;
+}
+.seat, .player {
+	position: absolute;
+	width: 30px; 
+	height: 30px;
+}
+.name {
+	position: absolute;
+	font-family: arial;
+	font-weight: bold;
+}
+.name1 {
+	position: relative;
+	font-family: arial;
+	font-weight: bold;
+	top: -20px;
+	left: 0px;
+}
+.name2 {
+	position: relative;
+	font-family: arial;
+	font-weight: bold;
+	top: -20px;
+	left: 0px;
+}
+.name3 {
+	position: relative;
+	font-family: arial;
+	font-weight: bold;
+	top: -20px;
+	left: 0px;
+}
+.name4 {
+	position: relative;
+	font-family: arial;
+	font-weight: bold;
+	top: -20px;
+	left: 0px;
+}
+.name5 {
+	position: relative;
+	font-family: arial;
+	font-weight: bold;
+	top: -20px;
+	left: 0px;
+}
+#record {
+	top: 10px;
+	left: 10px;
+}
+#record, #chairtitle, #chair, #sidetitle, #side, #mastersuittitle, #mastersuit, #mastervaluetitle, #mastervalue, #picktitle, #pick, #pickally, #scoretitle, #score, #message, #turn, #timer, #next, #hide, #bottom, #hidden, #showbottom, #another, .playarea>p {
+	position: absolute;
+	text-align: center;
+	font-weight: bold;
+	font-family: arial;
+}
+#chairtitle {
+	top: 0px;
+	left: 400px;
+}
+#chair {
+	top: 20px;
+	left: 400px;
+}
+#sidetitle {
+	top: 0px;
+	left: 550px;
+}
+#side {
+	top: 20px;
+	left: 550px;
+}
+#mastersuittitle {
+	top: 0px;
+	left: 750px;
+}
+#mastersuit {
+	top: 20px;
+	left: 750px;
+}
+#mastervaluetitle {
+	top: 0px;
+	left: 900px;
+}
+#mastervalue {
+	top: 20px;
+	left: 900px;
+}
+#picktitle {
+	top: 0px;
+	left: 1100px;
+}
+#pick {
+	top: 40px;
+	left: 1100px;
+}
+#scoretitle {
+	top: 0px;
+	right: 30px;
+}
+#score {
+	top: 20px;
+	right: 30px;
+}
+#message {
+	top: 40px;
+	left: 600px;
+	color: red;
+}
+#turn {
+	top: 450px;
+	left: 650px;
+}
+#next {
+	top: 50px;
+	left: -15px;
+	z-index: 1000;
+}
+#timer {
+	top: 280px;
+	left: 660px;
+	background-color: green;
+}
+.card, .topcard, .bottomcard, .hiddencard, .playedcard {
+	border: 2px solid brown;
+	position: absolute;
+}
+.testcard:hover, topcard:hover {border: 5px solid red;}
+.selected, .selectHidden {
+	top: -20px;
+}
+#playzone {
+	position: absolute;
+	top: 100px;
+	border: 5px solid orange;
+	height: 610px;
+	width: 1410px;
+	background-color: green;
+}
+#hold {
+	position: absolute;
+	top: 590px;
+	left: 15px;
+}
+#hide {
+	top: 530px;
+	left: 650px;
+}
+#bottom {
+	top: 430px;
+	left: 550px;
+}
+#hidden {
+	top: 440px;
+	right: 560px;
+}
+#showbottom {
+	top: 550px;
+	right: 40px;
+}
+#pickally {
+	top: 300px;
+	left: 600px;
+}
+.playarea {
+	position: absolute;
+	height: 120px;
+	width: 300px;
+}
+.trophy {
+	position: absolute;
+	height: 50px;
+	width: 50px;
+}
+#play1 {
+	top: 360px;
+	left: 550px;
+}
+#play2 {
+	top: 250px;
+	left: 10px;
+}
+#play3 {
+	top: 10px;
+	left: 260px;
+}
+#play4 {
+	top: 10px;
+	right: 260px;
+}
+#play5 {
+	top: 250px;
+	right: 10px;
+}
+#trophy1 {
+	top: 310px;
+	left: 680px;
+}
+#trophy2 {
+	top: 200px;
+	left: 10px;
+}
+#trophy3 {
+	top: 10px;
+	left: 210px;
+}
+#trophy4 {
+	top: 10px;
+	right: 210px;
+}
+#trophy5 {
+	top: 200px;
+	right: 10px;
+}
+.playarea>p {
+	color: brown;
+	margin: 0px;
+}
+#play1>p {
+	top: 0px;
+	left: 150px;
+}
+#play2>p {
+	top: 0px;
+	left: 0px;
+}
+#play3>p {
+	top: 0px;
+	left: 0px;
+}
+#play4>p {
+	top: 0px;
+	right: 0px;
+}
+#play5>p {
+	top: 0px;
+	right: 0px;
+}
+#showhidden {
+	position: absolute;
+	top: 275px;
+	left: 450px;
+}
+#another {
+	top: 550px;
+	left: 650px;
+	z-index: 1000;
+}
+#table1 {
+	top: 100px;
+	left: 100px;
+}
+#table2 {
+	top: 100px;
+	left: 200px;
+}

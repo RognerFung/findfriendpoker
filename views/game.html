@@ -1,0 +1,682 @@
+<!Doctype html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Table Page</title>
+<script src="/static/javascripts/jquery.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/2.0.4/socket.io.js"></script>
+<script src="/static/javascripts/functions.js"></script>
+<link rel="stylesheet" type="text/css" href="/static/stylesheets/style.css">
+</head>
+<body>
+<div id="login">
+	<h1 class="title">What's your nickname?</h3>
+	<input id="username" name="username" type="text" maxlength="14" />
+	<button id="logsub">submit</button>
+</div>
+
+<div id="wait">
+	<h1>Welcome!</h1>
+	<h2>Please sit on the chair</h2>
+
+	
+</div>
+
+<div id="game">
+	<table id="record">
+		<tr id="tname"><td></td><td></td><td></td><td></td><td></td><td></td></tr>
+		<tr id="tseat"><td>Seat</td><td></td><td></td><td></td><td></td><td></td></tr>
+		<tr id="tlevel"><td>Level</td><td></td><td></td><td></td><td></td><td></td></tr>
+		<tr id="tscore"><td>Score</td><td></td><td></td><td></td><td></td><td></td></tr>
+	</table>
+	
+	<h3 id="chairtitle">Chair</h3><h3 id="chair"></h3>
+	<h3 id="sidetitle">Follower</h3><h3 id="side"></h3>
+	<h3 id="mastersuittitle">MasterSuit</h3><h3 id="mastersuit"></h3>
+	<h3 id="mastervaluetitle">MasterValue</h3><h3 id="mastervalue"></h3>
+	<h3 id="picktitle">Pick</h3><div id="pick"><span id="pick1"></span><span id="pick2"></span></div>
+	<h3 id="scoretitle">Game Score</h3><h3 id="score"></h3>
+	<h1 id="message"></h1>
+	
+	<div id="playzone">
+		<div id="play1" class="playarea"><p></p></div>
+		<div id="play2" class="playarea"><p></p></div>
+		<div id="play3" class="playarea"><p></p></div>
+		<div id="play4" class="playarea"><p></p></div>
+		<div id="play5" class="playarea"><p></p></div>
+		<div id="trophy1" class="trophy"></div>
+		<div id="trophy2" class="trophy"></div>
+		<div id="trophy3" class="trophy"></div>
+		<div id="trophy4" class="trophy"></div>
+		<div id="trophy5" class="trophy"></div>
+	</div>
+	
+	<h2 id="turn"><img src="/static/images/hourglass.gif" alt="hourglass"><br/><button id="next">Play</button></h2>
+	<div id="hold"></div>
+</div>
+
+<script>
+$('#play').hide();
+$('#wait').hide();
+$('#game').hide();
+$('#turn').hide();
+$('#next').hide();
+var socket = io();
+var Cards;
+var ID;
+var Name;
+var Room = null;
+var Seat = null;
+var GameBegin = false;
+var Side;
+var Chair;
+var Scores = {'1': 0, '2': 0, '3': 0, '4': 0, '5': 0};
+var GameScore = 0;
+var Round = {'win': null, 'winner': null, 'count': 0, 'suit': null, 'score': 0, 'dump': null};
+var judge = false;
+var select = [];
+var restcard = false;
+var dongcount = 0;
+var jacked = false;
+var masterSuit = null;
+var masterValue = null;
+var Level = {'1': null, '2': null, '3': null, '4': null, '5': null};
+var hiddens = [];
+var pick = [];
+var count = 0;
+var playtype = 'play';
+
+
+$('#logsub').click(function() {
+	socket.emit('login', {
+		username: $('#username').val()
+	});
+	Name = $('#username').val();
+	$('#login').hide();
+	$('#wait').show();
+	for (var i = 1; i < 15; i++) {
+		$('#wait').append($('<div id="room' + i + '" class="room"></div>'));
+		$('#room' + i).append($('<div class="tableArea"></div><div class="seat1"></div><div class="seat2"></div><div class="seat3"></div><div class="seat4"></div><div class="seat5"></div>'));
+		draw_table('#room' + i + '>.tableArea');
+		for (var j = 1; j < 6; j++) {
+			draw_seat('#room' + i + '>.seat' + j);
+		}
+	}
+});
+
+socket.on('update state', function(data) {
+	update_state(data.name, data.room, data.seat);
+	if (!GameBegin && Seat !== null && $('#' + Room).find('.seat').length === 0) {
+		console.log('table full, ready to start game');
+		GameBegin = true;
+		socket.emit('table full', {
+			name: Name,
+			room: Room,
+			seat: Seat
+		});
+	}
+});
+
+$(document).on('click', '.seat', function() {
+	if (Seat === null) {
+		Seat = $(this).parent().attr('class').slice(-1);
+		Room = $(this).parent().parent().attr('id');
+		send_state(Name, Room, Seat);
+	}
+});
+
+$(document).on('click', '.player', function() {
+	if (Room === $(this).parent().parent().attr('id') && Seat === $(this).parent().attr('class').slice(-1)) {
+		Seat = null;
+		Room = null;
+		send_state(Name, Room, Seat);
+	}
+});
+
+socket.on('user info', function(data) {
+	$('#chair').text(data.chairName);
+	for (i=0;i<data.seats.length;i++) {
+		$('#tname>td:nth-child(' + (parseInt(data.seats[i]) + 1) + ')').text(data.names[i]);
+		$('#tseat>td:nth-child(' + (parseInt(data.seats[i]) + 1) + ')').text(data.seats[i]);
+		$('#tlevel>td:nth-child(' + (parseInt(data.seats[i]) + 1) + ')').text(data.levels[i]);
+		Level[(i + 1).toString()] = data.levels[i];
+		if (data.seats[i] === Seat) s = i;
+	}
+	for (i=1;i<6;i++) {
+		$('#play' + i).addClass(data.names[s]);
+		$('#play' + i + '>p').text(data.names[s]);
+		s = switch_turn(s);
+	}
+	$('#play1>p').text('');
+	for (i=1;i<6;i++) {
+		$('#trophy' + i).addClass('t' + data.names[s]);
+		s = switch_turn(s);
+	}
+});
+
+socket.on('deals', function(data) {
+	console.log('deals received');
+	console.log(data);
+	$('#wait').hide();
+	$('#game').show();
+	Chair = data.chair.seat;
+	masterSuit = data.master.suit;
+	masterValue = data.master.value;
+	Side = data.side;
+	$('#mastersuit').text(masterSuit);
+	$('#mastervalue').text(masterValue);
+	$('#message').text('Wait for the chair to start');
+	Cards = setup_cards(masterSuit, masterValue);
+	create_select(data.playercards).Sort().reverse().forEach(function(v) {
+		draw_card(v, '#hold', 'card');
+	});
+	overlap('.card');
+	Scores = {'1': 0, '2': 0, '3': 0, '4': 0, '5': 0};
+	GameScore = 0;
+	pick = [];
+	jacked = false;
+	hiddens = [];
+	$('#tscore>td').text(0);
+	$('#tscore>td').first().text('Score');
+	$('#tscore>td:nth-child(' + (parseInt(Chair) + 1) + ')').text('');
+	if (Seat === Chair) {
+		socket.emit('chair ready', {
+			room: Room
+		});
+	}
+});
+
+socket.on('bottom cards', function(data) {
+	console.log('bottom cards received');
+	console.log(data.topCards);	
+	console.log(data.bottomCards);
+	$('.card').hide();
+	$('<div id="bottom"></div>').insertBefore($('#hold'));
+	$('#bottom').append('<button id="collect">Collect</button><br/>');
+	data.bottomCards.forEach(function(v) {
+		draw_card(v, '#bottom', 'bottomcard');
+	});
+	overlap('.bottomcard', true);
+	create_select(data.topCards).Sort().reverse().forEach(function(v) {
+		draw_card(v, '#hold', 'topcard');
+	});
+	overlap('.topcard');
+	$('#message').text('Collect');
+	$('#collect').click(function() {
+		var topcards = data.topCards.concat(data.bottomCards);
+		$('.topcard').remove();
+		create_select(topcards).Sort().reverse().forEach(function(v) {
+			draw_card(v, '#hold', 'topcard');
+		});
+		overlap('.topcard');
+		$('#bottom').html('');
+		$('#bottom').remove();
+		$('#message').text('Choose 7 bottom cards');
+		$('.topcard').click(function() {
+			$(this).toggleClass('selectHidden');
+			if ($('.selectHidden').length === 7) {
+				$('<button id="hide">Hide</button>').insertBefore($('#hold'));
+				$('#message').text('Hide chosen bottom cards');
+			} else {
+				$('#hide').remove();
+			}
+			$('#hide').click(function() {
+				$(this).remove();
+				$('<button id="showbottom">Show</button><div id="hidden"></div>').insertAfter($('#hold'));
+				$('#hidebottom').hide();
+				$('.selectHidden').each(function() {
+					hiddens.push($(this).attr('value'));
+				});
+				$('.selectHidden').remove();
+				$('.topcard').remove();
+				$('.card').show();
+				console.log(hiddens);
+				hiddens.forEach(function(v) {
+					$('.card[value = ' + v + ']').first().remove();
+				});
+				overlap('.card');
+				$('#message').text('Please pick an ally card');
+				show_pick(masterSuit);
+				$('#picked').click(function(){
+					$('select option:selected').each(function(){
+						pick.push($(this).attr('value'));
+					});
+					$('#pickally').remove();
+					socket.emit('chair finished', {
+						room: Room,
+						pick: pick,
+						hiddens: hiddens
+					}); 
+				});
+			});			
+		});
+	});
+});
+
+socket.on('pick info', function(data) {
+	pick = data.pick;
+	var txt;
+	if (data.pick[0] === '1') txt = '1st ';
+	else if (data.pick[0] === '2') txt = '2nd ';
+	else txt = '3rd ';					
+	$('#pick>span').first().text(txt);
+	$('<img id="picksuit" src="/static/images/' + data.pick[1] + '.png" alt="' + data.pick[1] + '" width="13px" height="15px">').insertAfter($('#pick>span').first());
+	$('#pick>span').last().text(' ' + data.pick[2]);
+});
+
+$(document).on('click', '#showbottom', function() {
+	hiddens.forEach(function(v) {
+		draw_card(v, '#hidden', 'hiddencard');
+	});
+	overlap('.hiddencard', true);
+	$('.hiddencard').show('slow');
+	$('.hiddencard').fadeOut(5000, function() {
+		$(this).remove();
+	});
+});
+
+socket.on('turn', function(data) {
+	$('#timer').remove();
+	$('#next').hide();
+	timer('timer' + Math.floor((Math.random() * 10000) + 1));
+	if (data.turn === Seat) {
+		$('#turn').show();
+	} else $('#turn').hide();
+});
+
+$(document).on('click', '.card', function() {
+	$(this).toggleClass('selected');
+	select = [];
+	$('.selected').each(function() { select.push($(this).attr('value')); });
+	console.log('select: ' + select);
+	if (Round.count === 0) {
+		if (vali_same_suit(select)) {
+			$('#next').show();
+			$('#next').focus();
+			judge = 1;
+		} else $('#next').hide();
+	} else {
+		hold = [];
+		$('.card').each(function() {
+			if (create_card($(this).attr('value')).Suit() === Round.suit) {
+				hold.push($(this).attr('value'));
+			}
+		});
+		if (playtype === 'play') {
+			judge = vali_select(select, Round.win, hold, Round.suit);
+		} else {
+			judge = vali_dump(select, Round.dump, Round.win, hold);
+		}
+		if (typeof judge === 'number') {
+			$('#next').show();
+			$('#next').focus();
+		} else {
+			$('#next').hide();
+			$('#message').text(judge);
+		}
+	}
+});
+
+$('#next').click(function() {
+	socket.emit('next', {
+		room: Room,
+		seat: Seat
+	});
+	$('#turn').hide();
+	if (create_select(select).Type() === 'dump' && Round.count === 0) {
+		socket.emit('testdump', {
+			room: Room,
+			play: select,
+			seat: Seat
+		});
+	} else if (Round.count > 0 && playtype === 'dump') {
+		socket.emit('dump', {
+			room: Room,
+			play: select,
+			judge: judge,
+			seat: Seat,
+			name: Name
+		});
+		$('.selected').remove();
+		overlap('.card');
+	} else {
+		socket.emit('play', {
+			room: Room,
+			play: select,
+			judge: judge,
+			seat: Seat,
+			name: Name
+		});
+		$('.selected').remove();
+		overlap('.card');
+	}
+});
+
+socket.on('validate dump', function(data) {
+	console.log('a dump coming: ' + data.play);
+	var hold = [];
+	$('.card').each(function() {
+		if (create_card($(this).attr('value')).Suit() === create_select(data.play).Suit()) {
+			hold.push($(this).attr('value'));
+		}
+	});
+	console.log('I have these cards in dump\'s suit: ' + hold);
+	socket.emit('dong', {
+		room: Room,
+		origin: data.origin,
+		restcard: challenge_dump(data.play, hold)
+	});
+});
+
+socket.on('play coming', function(data) {
+	if (Side.majority.length === 0) {
+		num = 0;
+		data.play.forEach(function(v) { if (v === pick[1] + pick[2]) num++; });
+		if (num > 0) {
+			pick[0] -= num;
+			if (pick[0] <= 0) {
+				Side.minority.push(data.seat);
+				['1','2','3','4','5'].forEach(function(v) { if (v !== Chair && v != data.seat) Side.majority.push(v); });
+				Scores[data.seat] = 0;
+				Side.majority.forEach(function(v) { GameScore += Scores[v]; });
+				$('#score').text(GameScore);
+				$('#message').text(data.name + ' has followed the chair');
+				$('#side').text(data.name);
+			}		
+		}
+	}
+	data.play.forEach(function(v) {
+		draw_card(v, '.' + data.name, 'playedcard');
+	});
+	overlap('.' + data.name + '> canvas', true);
+	Round.count++;
+	Round.score += create_select(data.play).Score();
+	console.log('Round score: ' + Round.score);
+	judge = data.judge;
+	if (Round.count === 1) {
+		Round.suit = create_select(data.play).Suit();
+	}
+	if (judge > 0) {
+		Round.win = data.play;
+		Round.winner = data.seat;
+		Round.winnername = data.name;
+		$('#thetrophy').remove();
+		$('.t' + data.name).append('<img id="thetrophy" src="/static/images/trophy.jpg" alt="trophy" width="50px" height="50px">');
+	}
+	if (Round.count === 5) {
+		if (Side.majority.length > 0) {
+			if (Side.minority.indexOf(Round.winner) === -1) GameScore += Round.score;
+			console.log('Game score: ' + GameScore);
+			$('#score').text(GameScore);
+		} else {
+			Scores[Round.winner] += Round.score;
+			console.log('Scores: ' + Scores);
+			if (Round.winner !== Chair) {
+				$('#tscore>td:nth-child(' + (parseInt(Round.winner) + 1) + ')').text(Scores[Round.winner]);
+			}
+		}
+		if ($('.card').length === 0) {
+			socket.emit('game end', {
+				room: Room,
+				win: Round.win,
+				winner: Round.winner
+			});
+		} else {
+			$('#message').text('Round winner is ' + Round.winnername);
+			socket.emit('round end', {
+				room: Room,
+				winnerseat: Round.winner
+			});
+		}
+		Round.win = null;
+		Round.count = 0;
+		Round.winner = null;
+		Round.suit = null;
+		Round.score = 0;
+		$('#thetrophy').remove();
+		$('#next').hide();
+		$('.playedcard').fadeOut(8000, function() {
+			$(this).remove();
+		});
+	}
+});
+
+socket.on('dump coming', function(data) {
+	if (Side.majority.length === 0) {
+		num = 0;
+		data.play.forEach(function(v) { if (v === pick[1] + pick[2]) num++; });
+		if (num > 0) {
+			pick[0] -= num;
+			if (pick[0] <= 0) {
+				Side.minority.push(data.seat);
+				['1','2','3','4','5'].forEach(function(v) { if (v !== Chair && v != data.seat) Side.majority.push(v); });
+				Scores[data.seat] = 0;
+				Side.majority.forEach(function(v) { GameScore += Scores[v]; });
+				$('#score').text(GameScore);
+				$('#message').text(data.name + ' has followed the chair');
+				$('#side').text(data.name);
+			}		
+		}
+	}
+	data.play.forEach(function(v) {
+		draw_card(v, '.' + data.name, 'playedcard');
+	});
+	overlap('.' + data.name + '> canvas', true);
+	Round.count++;
+	Round.score += create_select(data.play).Score();
+	console.log('Round score: ' + Round.score);
+	judge = data.judge;
+	if (Round.count === 1) {
+		Round.dump = data.play;
+		Round.suit = create_select(data.play).Suit();
+		playtype = 'dump';
+	}
+	if (judge > 0) {
+		Round.win = data.play;
+		Round.winner = data.seat;
+		Round.winnername = data.name;
+		$('#thetrophy').remove();
+		$('.t' + data.name).append('<img id="thetrophy" src="/static/images/trophy.jpg" alt="trophy" width="50px" height="50px">');
+	}
+	if (Round.count === 5) {
+		if (Side.majority.length > 0) {
+			if (Side.minority.indexOf(Round.winner) === -1) GameScore += Round.score;
+			console.log('Game score: ' + GameScore);
+			$('#score').text(GameScore);
+		} else {
+			Scores[Round.winner] += Round.score;
+			console.log('Scores: ' + Scores);
+			if (Round.winner !== Chair) {
+				$('#tscore>td:nth-child(' + (parseInt(Round.winner) + 1) + ')').text(Scores[Round.winner]);
+			}
+		}
+		if ($('.card').length === 0) {
+			socket.emit('game end', {
+				room: Room,
+				win: Round.win,
+				winner: Round.winner
+			});
+		} else {
+			$('#message').text('Round winner is ' + Round.winnername);
+			socket.emit('round end', {
+				room: Room,
+				winnerseat: Round.winner
+			});
+		}
+		Round.win = null;
+		Round.count = 0;
+		Round.winner = null;
+		Round.suit = null;
+		Round.dump = null;
+		playtype = 'play';
+		Round.score = 0;
+		$('#thetrophy').remove();
+		$('#next').hide();
+		$('.playedcard').fadeOut(8000, function() {
+			$(this).remove();
+		});
+	}
+});
+
+socket.on('got dong', function(data) {
+	dongcount++;
+	console.log('rest card' + restcard);
+	console.log('dong count' + dongcount);
+	if (restcard) {
+		if (data.restcard) {
+			var typeOrder = {'single': 1, 'double': 2, 'triple': 3, 'tractor': 4, 'tritractor': 5};
+			if (typeOrder[create_select(restcard).Type()] > typeOrder[create_select(data.restcard).Type()]) {
+				restcard = data.restcard;
+			}
+		}
+	} else {
+		restcard = data.restcard;
+	}
+	if (dongcount === 4) {
+		if (restcard) {
+			$('#message').text('DONG!');
+			select = restcard;
+			socket.emit('play', {
+				room: Room,
+				play: select,
+				judge: judge,
+				seat: Seat,
+				name: Name
+			});
+			select.forEach(function(v) {
+				$('.selected[value = ' + v + ']').first().remove();
+			});
+			$('.selected').removeClass('selected');
+			restcard = false;
+			overlap('.card');
+		} else {
+			$('#message').text('a successful dump');
+			socket.emit('dump', {
+				room: Room,
+				play: select,
+				judge: judge,
+				seat: Seat,
+				name: Name
+			});
+			$('.selected').remove();
+			overlap('.card');
+		}
+		dongcount = 0;
+	}
+});
+
+socket.on('show hiddens', function(data) {
+	hiddens = data.hiddens;
+	$('<div id="showhidden"></div>').insertBefore($('#hold'));
+	hiddens.forEach(function(v) {
+		draw_card(v, '#showhidden', 'hiddencard');
+	});
+	overlap('.hiddencard', true);
+	if (Side.minority.indexOf(data.winner) == -1) {
+		H = create_select(hiddens);
+		if (H.Score() > 0) {
+			console.log('jackport');
+			if (create_select(data.win).Type() === 'dump') GameScore += H.Score() * 2;
+			if (create_select(data.win).Type() === 'single') GameScore += H.Score() * 2;
+			if (create_select(data.win).Type() === 'double') GameScore += H.Score() * 4;
+			if (create_select(data.win).Type() === 'triple') GameScore += H.Score() * 8;
+			if (create_select(data.win).Type() === 'tractor') GameScore += H.Score() * 16;
+			if (create_select(data.win).Type() === 'tritractor') GameScore += H.Score() * 32;
+			console.log('final game score' + GameScore);
+			$('#score').text(GameScore);
+		}
+		if (masterSuit && masterValue === 'J') {
+			Level[Side.minority[0]] = '2';
+			if (data.win === [masterSuit + 'J']) {
+				jacked = true;
+				console.log("Got single jacked");
+			}
+			if (data.win === [masterSuit + 'J', masterSuit + 'J']) {
+				jacked = true;
+				console.log("Got double jacked");
+			}
+			if (data.win === [masterSuit + 'J', masterSuit + 'J', masterSuit + 'J']) {
+				jacked = true;
+				console.log("Got triple jacked");
+			}
+		}
+	}
+	if (GameScore < 120) {
+		console.log('minority win');
+		$('#message').text('minority win');
+		if (jacked === false) {
+			Level[Side.minority[0]] = level_up(Level[Side.minority[0]], GameScore, 'chair');
+		}
+		Level[Side.minority[1]] = level_up(Level[Side.minority[1]], GameScore, 'minority');
+	} else {
+		console.log('majority win');
+		$('#message').text('majority win');
+		Level[Side.majority[0]] = level_up(Level[Side.majority[0]], GameScore, 'majority');
+		Level[Side.majority[1]] = level_up(Level[Side.majority[1]], GameScore, 'majority');
+		Level[Side.majority[2]] = level_up(Level[Side.majority[2]], GameScore, 'majority');
+		var nextChair = parseInt(Chair) + 1;
+		if (nextChair > 5) {
+			nextChair = nextChair % 5;
+		}
+		Chair = nextChair.toString();
+		if (Side.minority[1] === Chair) {
+			var nextChair = parseInt(Chair) + 1;
+			if (nextChair > 5) {
+				nextChair = nextChair % 5;
+			}
+			Chair = nextChair.toString();
+		}
+	}
+	masterValue = Level[Chair];
+	console.log('Level' + Level);
+	console.log('Chair' + Chair);
+	console.log('Value' + masterValue);
+	socket.emit('game result', {
+		room: Room,
+		newLevel: Level,
+		newChair: Chair,
+		newMasterValue: masterValue
+	});
+});
+
+socket.on('again', function() {
+	$('<button id="another">Next?</button>').insertBefore($('#hold'));
+	$('#another').focus();
+	$('#another').click(function() {
+		$(this).remove();
+		$('#hidden').html('');
+		$('#hidden').remove();
+		$('#showhidden').html('');
+		$('#showhidden').remove();
+		$('#showbottom').remove();
+		$('#pick>span').empty();
+		$('#picksuit').remove();
+		$('#chair').empty();
+		$('#side').empty();
+		$('#mastersuit').empty();
+		$('#mastervalue').empty();
+		$('#score').empty();
+		$('.play').empty();
+		$('#timer').remove();
+		socket.emit('again ready', {
+			room: Room
+		});
+	});
+});
+
+socket.on('confirm', function() {
+	$('#message').text('Wait for others to confirm next game');
+	count++;
+	if (count === 5) {
+		socket.emit('table full', {
+			name: Name,
+			room: Room,
+			seat: Seat
+		});
+		count = 0;
+	}
+})
+</script>
+
+</body>
+</html>
