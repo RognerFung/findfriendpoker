@@ -7,7 +7,6 @@ var port = process.env.PORT || 3000;
 var session = require('express-session');
 var bodyParser = require('body-parser');
 var urlencodedParser = bodyParser.urlencoded({ extended: false });
-//var exphbs  = require('express-handlebars');
 var hbs = require('hbs');
 var util = require('./public/javascripts/util');
 var Users = {};
@@ -20,6 +19,7 @@ app.use(session({
     saveUninitialized: true
 }));
 app.use('/static', express.static(path.join(__dirname, 'public')));
+app.use('/library', express.static(path.join(__dirname, 'node_modules')));
 
 app.set('view engine', 'html');
 app.engine('html', hbs.__express);
