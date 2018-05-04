@@ -3,7 +3,7 @@ var app = express();
 var path = require('path');
 var server = require('http').Server(app);
 var io = require('socket.io')(server);
-var port = process.env.PORT || 3000;
+var port = process.env.PORT || 8080;
 var session = require('express-session');
 var bodyParser = require('body-parser');
 var urlencodedParser = bodyParser.urlencoded({ extended: false });
@@ -202,6 +202,6 @@ io.on('connection', function(socket) {
 	});
 });
 
-server.listen(3000, function() {
-	console.log('Example app listening on port 3000');
+server.listen(8080, function() {
+	console.log('Example app listening on port 8080');
 })
