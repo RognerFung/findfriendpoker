@@ -1,5 +1,6 @@
 module.exports = {
-
+//for users whose seat is not null, save their name, room, seat info relatively in three arrays and emit to all users
+//for updating the seat situation to all online users
 update_state: function(Users, io) {
 	var name = [];
 	var room = [];
@@ -17,7 +18,8 @@ update_state: function(Users, io) {
 		seat: seat
 	});
 },
-
+//create a game room, has roomID, Game, Players, Levels properties
+//Game is a object contains master, chair, side, hiddens properties
 create_room: function create_room(roomID) {
 	var Room = {};
 	Room['ID'] = roomID;
@@ -26,20 +28,12 @@ create_room: function create_room(roomID) {
 	Room['Levels'] = {};
 	return Room;
 },
-
+//emit userinfo the the 5 users in the room, include the chair, players, levels info
 update_userinfo: function(room, io) {
-	var names = [];
-	var seats = ['1', '2', '3', '4', '5'];
-	var levels = [];
-	seats.forEach(function(v) {
-		names.push(room['Players'][v]);
-		levels.push(room['Levels'][v]);
-	});
 	io.to(room['ID']).emit('user info', {
 		chairName: room['Game']['chair']['name'],
-		names: names,
-		seats: seats,
-		levels: levels
+		players: room['Players'],
+		levels: room['Levels']
 	});
 },
 

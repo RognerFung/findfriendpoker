@@ -38,4 +38,10 @@ A five-player 'level-up' poker game. 五位玩家的升级扑克游戏.<br />
 1、游戏开始发牌时采用主动叫主而不是随机产生主牌花色。<br />
 2、断线或计时器到0后自动打出最小牌。<br />
 3、每盘结尾自动出牌。<br />
-4、甩牌时跟牌存在bug待解决。
+4、甩牌时跟牌存在bug待解决。<br />
+5. pick-ally-card selects could use font-awesome suits.<br />
+6. timer to zero then not really do anything. Need to automaticaly play the smallest suitable cards.<br />
+7. create_select Sort method seems the same with function ssort(), need to make sure.<br />
+8. create_select Tri_Double method, else if !This.Double() and !This.Triple() seems useless, need to make sure.<br />
+9. create_select Patterns() doesn't actually do anything, perhaps use for simplify the validating, need to make sure.<br />
+10. validate_select, if (RoundWin.Type() === 'tritractor'/'tractor'), now the rule is: if play tritractor/tractor, only have to follow a tritractor/tractor, don't have to follow the longest tritractor/tractor(less than play's). might need change, but the situation is quite rare.<br />

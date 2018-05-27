@@ -86,7 +86,9 @@ var pick = [];
 var count = 0;
 var playtype = 'play';
 
-
+//when user login, emit the username to server
+//hide the login interface, show the game hall interface
+//draw 14 tables and around each table draw 5 seat
 $('#logsub').click(function() {
 	socket.emit('login', {
 		username: $('#username').val()
@@ -103,7 +105,9 @@ $('#logsub').click(function() {
 		}
 	}
 });
-
+//receive 'update state' signal, draw names on the seat if user has sat on the seat, clear seat if user has left the seat
+//three conditions of table full: game not begin, user has sat down, all seat around the table user sitting is taken
+//game begin and emit 'table full' signal to server with user's name, room and seat info
 socket.on('update state', function(data) {
 	update_state(data.name, data.room, data.seat);
 	if (!GameBegin && Seat !== null && $('#' + Room).find('.seat').length === 0) {
@@ -116,7 +120,7 @@ socket.on('update state', function(data) {
 		});
 	}
 });
-
+//when an unseated user clicks on an empty seat, he will sit on the seat, emit the name, room and seat info to server
 $(document).on('click', '.seat', function() {
 	if (Seat === null) {
 		Seat = $(this).parent().attr('class').slice(-1);
@@ -124,7 +128,7 @@ $(document).on('click', '.seat', function() {
 		send_state(Name, Room, Seat);
 	}
 });
-
+//when a seated user clicks on the exactly seat he is sitting on, he will leave the seat, emit the name, room and seat info to server
 $(document).on('click', '.player', function() {
 	if (Room === $(this).parent().parent().attr('id') && Seat === $(this).parent().attr('class').slice(-1)) {
 		Seat = null;
@@ -132,28 +136,38 @@ $(document).on('click', '.player', function() {
 		send_state(Name, Room, Seat);
 	}
 });
-
+//receive 'user info' signal, show chair name on #chair
+//show name, level data on the user info table
+//each user has his own play card zone with an id, seperated located on 5 positions on the desktop
+//make sure in each user's interface, his own play card zone's id is play1, and others is play2 - play5 in sitting order
+//own name doesn't show
 socket.on('user info', function(data) {
-	$('#chair').text(data.chairName);
-	for (i=0;i<data.seats.length;i++) {
-		$('#tname>td:nth-child(' + (parseInt(data.seats[i]) + 1) + ')').text(data.names[i]);
-		$('#tseat>td:nth-child(' + (parseInt(data.seats[i]) + 1) + ')').text(data.seats[i]);
-		$('#tlevel>td:nth-child(' + (parseInt(data.seats[i]) + 1) + ')').text(data.levels[i]);
-		Level[(i + 1).toString()] = data.levels[i];
-		if (data.seats[i] === Seat) s = i;
-	}
-	for (i=1;i<6;i++) {
-		$('#play' + i).addClass(data.names[s]);
-		$('#play' + i + '>p').text(data.names[s]);
-		s = switch_turn(s);
+    $('#chair').text(data.chairName);
+    Object.keys(data.players).forEach(function(v) {
+        $('#tname>td:nth-child(' + (parseInt(v) + 1) + ')').text(data.players[v]);
+        $('#tseat>td:nth-child(' + (parseInt(v) + 1) + ')').text(v);
+        $('#tlevel>td:nth-child(' + (parseInt(v) + 1) + ')').text(data.levels[v]);
+        Level[v] = data.levels[v];
+    });
+    var s = Seat;
+	for (var i = 1; i < 6; i++) {
+        $('#play' + i).addClass(data.players[s]);
+        $('#play' + i + '>p').text(data.players[s]);
+        $('#trophy' + i).addClass('t' + data.players[s]);
+        s = switch_turn(s);
+        if (s === 0) {
+            s = '5';
+        }
 	}
 	$('#play1>p').text('');
-	for (i=1;i<6;i++) {
-		$('#trophy' + i).addClass('t' + data.names[s]);
-		s = switch_turn(s);
-	}
 });
-
+//receive 'deals' from server, contains game info include playercards, chair, masterSuit, masterValue, side
+//show the game info into corresponding areas
+//setup Cards for this game using masterSuit and masterValue
+//draw player cards in #hold area, in specific order, cards spread in certain distance
+//new game, scores are all zero, listed in #score area, chair do not have score
+//initite game parameters like GameScore, pick, jacked and hiddens
+//chair send 'chair ready' signal to server
 socket.on('deals', function(data) {
 	console.log('deals received');
 	console.log(data);
@@ -185,14 +199,22 @@ socket.on('deals', function(data) {
 		});
 	}
 });
-
+//hide cards that already dealed
+//receive 'bottom cards' from server, draw bottom cards in #bottom area, add a collect button, focus on it
+//draw topcards as regular cards in #hold area, in certain order and distance
+//hide cards and use duplicated topcards is because click directly on cards to choose hidden cards will contaminate click to play game
+//click #collect, remove old topcards, add bottom cards into topcards, draw new topcards in new order and new distance.
+//click on topcards will toggle selectHidden class to it, once select 7, #hide button will show, focused, if not 7, #hide button will hide
+//click on #hide, save 7 hidden cards into hidden array, hide them as hidden cards, remove #hide button, cards show, remove hidden cards from cards, #pick show
+//once chair pick a ally card, remove #pick selections, emit 'chair finished' to server
 socket.on('bottom cards', function(data) {
 	console.log('bottom cards received');
 	console.log(data.topCards);	
 	console.log(data.bottomCards);
 	$('.card').hide();
 	$('<div id="bottom"></div>').insertBefore($('#hold'));
-	$('#bottom').append('<button id="collect">Collect</button><br/>');
+    $('#bottom').append('<button id="collect">Collect</button><br/>');
+    $('#collect').focus();
 	data.bottomCards.forEach(function(v) {
 		draw_card(v, '#bottom', 'bottomcard');
 	});
@@ -215,7 +237,8 @@ socket.on('bottom cards', function(data) {
 		$('.topcard').click(function() {
 			$(this).toggleClass('selectHidden');
 			if ($('.selectHidden').length === 7) {
-				$('<button id="hide">Hide</button>').insertBefore($('#hold'));
+                $('<button id="hide">Hide</button>').insertBefore($('#hold'));
+                $('#hide').focus();
 				$('#message').text('Hide chosen bottom cards');
 			} else {
 				$('#hide').remove();
@@ -252,18 +275,23 @@ socket.on('bottom cards', function(data) {
 		});
 	});
 });
-
+//receive 'pick info' from server, save it into pick array, translate the data and show it on #pick area
 socket.on('pick info', function(data) {
 	pick = data.pick;
 	var txt;
-	if (data.pick[0] === '1') txt = '1st ';
-	else if (data.pick[0] === '2') txt = '2nd ';
-	else txt = '3rd ';					
+	if (data.pick[0] === '1') {
+        txt = '1st ';
+    } else if (data.pick[0] === '2') {
+        txt = '2nd ';
+    } else {
+        txt = '3rd ';
+    }					
 	$('#pick>span').first().text(txt);
 	$('<img id="picksuit" src="/static/images/' + data.pick[1] + '.png" alt="' + data.pick[1] + '" width="13px" height="15px">').insertAfter($('#pick>span').first());
 	$('#pick>span').last().text(' ' + data.pick[2]);
 });
-
+//only chair has #showbottom button on his interface, click on it will show 7 hidden cards to the chair, in case he forgot what did he pick
+//5 seconds later the hidden cards will automaticaly hide
 $(document).on('click', '#showbottom', function() {
 	hiddens.forEach(function(v) {
 		draw_card(v, '#hidden', 'hiddencard');
@@ -274,16 +302,27 @@ $(document).on('click', '#showbottom', function() {
 		$(this).remove();
 	});
 });
-
+//receive 'turn' signal from server, remove old #timer first, hide #next button
+//add a class with a random name like 'timer2967' to the #timer, in case different timer interferes each other
+//a gif #turn, which is a hourglass, will show in a user's interface if it's his turn, hide if it's not, tell him it's his turn to play
 socket.on('turn', function(data) {
 	$('#timer').remove();
 	$('#next').hide();
 	timer('timer' + Math.floor((Math.random() * 10000) + 1));
 	if (data.turn === Seat) {
 		$('#turn').show();
-	} else $('#turn').hide();
+	} else {
+        $('#turn').hide();
+    }
 });
-
+//when click on cards, toggle a 'selected' class to the card, save selected cards' value into a select array
+//if round just begin, only have to validate the select has the same suit, if select is legal, #next button show and focus, if not, #next button hide
+//if Round.count is not 0, means it's in the middle of a round, need to validate select is legal or not
+//save the values of all the cards in the same suit with Round.suit into a hold array
+// if playtype is regular play, use validate select, or if playtype is dump, use validate dump, validate result is judge
+//judge = 1 means current play is the winplay, -1 means not, if judge is not number means select is not legal, and will give user a warning
+//if judge is number, means select is legal, #next show and focus, and user can click it to play card
+//if judge is not a number, means select is not legal, a warning will be given, and showed in #message area
 $(document).on('click', '.card', function() {
 	$(this).toggleClass('selected');
 	select = [];
@@ -294,7 +333,9 @@ $(document).on('click', '.card', function() {
 			$('#next').show();
 			$('#next').focus();
 			judge = 1;
-		} else $('#next').hide();
+		} else {
+            $('#next').hide();
+        }
 	} else {
 		hold = [];
 		$('.card').each(function() {
@@ -316,7 +357,11 @@ $(document).on('click', '.card', function() {
 		}
 	}
 });
-
+//click on #next button, emit 'next' signal to server with room and seat info, and #turn gif hide
+//if it's round start and playtype is 'dump', emit 'testdump' to server to validate the dump is successful or not
+//if it's not round start and playtype is 'dump', emit 'dump' to server with judge and other data
+//else it's just regular play, emit 'play' to server with judge and other data
+//remove selected cards, re-shape the cards, make them centered and adjust distance
 $('#next').click(function() {
 	socket.emit('next', {
 		room: Room,
@@ -351,7 +396,9 @@ $('#next').click(function() {
 		overlap('.card');
 	}
 });
-
+//receive 'validate dump' signal from server, put all same suit cards in hold array
+//use challenge_dump() to see if the hold has card patterns which can beat testdump, restcard is the challenge result
+//emit 'dong' to server, with data.origin(which is the socket.id of the origin testdump player), and the challenge result restcard
 socket.on('validate dump', function(data) {
 	console.log('a dump coming: ' + data.play);
 	var hold = [];
@@ -367,7 +414,17 @@ socket.on('validate dump', function(data) {
 		restcard: challenge_dump(data.play, hold)
 	});
 });
-
+//receive 'play coming' signal from server, first see if allycard was played, if so, side is decided, show it on the #side area
+//draw played cards in playedcard area
+//Round.count and Round.score recorded, and judge updated
+//if Round.count is 1, means round has just started, Round.suit is the origin suit
+//if judge > 1, current play is a winplay, set Round.win to current play, record the winner seat and winner name, remove #trophy, draw new #trophy to the winner's playcardarea
+//if Round.count is 5, means round is about to end, have to record score
+//if side has already been decided (Side.majority.length>0), if majority has won the round, add round score to GameScore, and show it in #score area, if minority has won, score is ignored
+//if side has not been decided, add round score to round winner's personal score table, unless round winner is chair, in that case the score will be ignored
+//when round ends, reset all parameters, all played cards fadeout in 8 seconds, trophy and next buttons are hidden, waiting for the next round start
+//if there is still cards left, emit 'round end' to server to start the next round, round winner will have his turn
+//if there is no cards left, emit 'game end' to server to wrap up the game
 socket.on('play coming', function(data) {
 	if (Side.majority.length === 0) {
 		num = 0;
@@ -440,7 +497,17 @@ socket.on('play coming', function(data) {
 		});
 	}
 });
-
+//receive 'dump coming' signal from server, first see if allycard was played, if so, side is decided, show it on the #side area
+//draw played cards in playedcard area
+//Round.count and Round.score recorded, and judge updated
+//if Round.count is 1, means round has just started, Round.dump is the origin play, Round.suit is the origin suit, set playtype to 'dump'
+//if judge > 1, current play is a winplay, set Round.win to current play, record the winner seat and winner name, remove #trophy, draw new #trophy to the winner's playcardarea
+//if Round.count is 5, means round is about to end, have to record score
+//if side has already been decided (Side.majority.length>0), if majority has won the round, add round score to GameScore, and show it in #score area, if minority has won, score is ignored
+//if side has not been decided, add round score to round winner's personal score table, unless round winner is chair, in that case the score will be ignored
+//when round ends, reset all parameters, all played cards fadeout in 8 seconds, trophy and next buttons are hidden, waiting for the next round start
+//if there is still cards left, emit 'round end' to server to start the next round, round winner will have his turn
+//if there is no cards left, emit 'game end' to server to wrap up the game
 socket.on('dump coming', function(data) {
 	if (Side.majority.length === 0) {
 		num = 0;
@@ -480,7 +547,9 @@ socket.on('dump coming', function(data) {
 	}
 	if (Round.count === 5) {
 		if (Side.majority.length > 0) {
-			if (Side.minority.indexOf(Round.winner) === -1) GameScore += Round.score;
+			if (Side.minority.indexOf(Round.winner) === -1) {
+                GameScore += Round.score;
+            }
 			console.log('Game score: ' + GameScore);
 			$('#score').text(GameScore);
 		} else {
@@ -517,7 +586,17 @@ socket.on('dump coming', function(data) {
 		});
 	}
 });
-
+//receive 'got done'(all four of them) signal from server, everytime got done, dongcount++
+//restcard represent test dump successful or fail. default false(successful). 
+//when receive one data.restcard, if restcard is false, assign data.restcard to restcard
+//if new restcard is still false, just wait for the next data.restcard coming
+//when dongcount is 4, all data.restcards are received, if restcard is false means all of the data.restcards are false, means the testdump is a successful dump
+//if testdump is successful, emit 'dump' to server, 
+//if one data.restcard is not false, testdump is a fail dump
+//if more than one data.restcards is not false, there is a way to determine which data.restcard is to assigned to restcard by using typeOrder
+//if restcard's typeOrder is smaller than data.restcard's typeOrder, assign data.restcard to restcard, means small single is left first, than double and others
+//a fail testdump means a automatically re-select, only restcard is left as a regular play to emit 'play' to server, rest back to cards
+//when all done, reset dongcount to 0 and restcard to false
 socket.on('got dong', function(data) {
 	dongcount++;
 	console.log('rest card' + restcard);
@@ -564,7 +643,13 @@ socket.on('got dong', function(data) {
 		dongcount = 0;
 	}
 });
-
+//receive 'show hiddens' from server, draw 7 hidden cards in the playcardzone, left every player see if it contains score cards
+//if minority lose the final round, see if there is a jackport. if hiddens contains score, there is a jackport
+//in the condition of jackport, hidden score will be double or multi-double, and added to GameScore
+//if masterSuit if not false and masterValue is 'J', there is a chance the chair would be jacked
+//1. minority lose final round; 2. final round winplay is single/double/triple masterSuit 'J'. if these two condition were met, chair is jacked, and his level will be droped to '2'
+//according to GameScore, the game is judged which side is the winner and if the winner's level should get up and how many levels up
+//according to game result, the next game's chair, masterValue, and levels is decided and emit to server as 'game result'
 socket.on('show hiddens', function(data) {
 	hiddens = data.hiddens;
 	$('<div id="showhidden"></div>').insertBefore($('#hold'));
@@ -572,8 +657,8 @@ socket.on('show hiddens', function(data) {
 		draw_card(v, '#showhidden', 'hiddencard');
 	});
 	overlap('.hiddencard', true);
-	if (Side.minority.indexOf(data.winner) == -1) {
-		H = create_select(hiddens);
+	if (Side.minority.indexOf(data.winner) === -1) {
+		var H = create_select(hiddens);
 		if (H.Score() > 0) {
 			console.log('jackport');
 			if (create_select(data.win).Type() === 'dump') GameScore += H.Score() * 2;
@@ -586,17 +671,19 @@ socket.on('show hiddens', function(data) {
 			$('#score').text(GameScore);
 		}
 		if (masterSuit && masterValue === 'J') {
-			Level[Side.minority[0]] = '2';
 			if (data.win === [masterSuit + 'J']) {
-				jacked = true;
+                jacked = true;
+                Level[Side.minority[0]] = '2';
 				console.log("Got single jacked");
 			}
 			if (data.win === [masterSuit + 'J', masterSuit + 'J']) {
-				jacked = true;
+                jacked = true;
+                Level[Side.minority[0]] = '2';
 				console.log("Got double jacked");
 			}
 			if (data.win === [masterSuit + 'J', masterSuit + 'J', masterSuit + 'J']) {
-				jacked = true;
+                jacked = true;
+                Level[Side.minority[0]] = '2';
 				console.log("Got triple jacked");
 			}
 		}
@@ -604,7 +691,7 @@ socket.on('show hiddens', function(data) {
 	if (GameScore < 120) {
 		console.log('minority win');
 		$('#message').text('minority win');
-		if (jacked === false) {
+		if (!jacked) {
 			Level[Side.minority[0]] = level_up(Level[Side.minority[0]], GameScore, 'chair');
 		}
 		Level[Side.minority[1]] = level_up(Level[Side.minority[1]], GameScore, 'minority');
@@ -638,7 +725,8 @@ socket.on('show hiddens', function(data) {
 		newMasterValue: masterValue
 	});
 });
-
+//receive 'again' from server, add a #another button, focus, click on it will reset all parameters and start another game
+//all parameters reset, emit 'again ready' to server
 socket.on('again', function() {
 	$('<button id="another">Next?</button>').insertBefore($('#hold'));
 	$('#another').focus();
@@ -663,7 +751,7 @@ socket.on('again', function() {
 		});
 	});
 });
-
+//receive 'confirm' signal from server, if count reached 5 means all 5 players have confirmed, emit 'table full' to server to start the nexgt game, reset count to 0
 socket.on('confirm', function() {
 	$('#message').text('Wait for others to confirm next game');
 	count++;
