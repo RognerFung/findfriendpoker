@@ -5,7 +5,7 @@
   "main": "index.1.1.js",
   "dependencies": {
     "express": "^4.16.3",
-    "express-handlebars": "^3.0.0",
+    "express-handlebars": "^5.3.1",
     "express-hbs": "^1.0.4",
     "express-session": "^1.15.6",
     "forever-monitor": "^1.7.1",
