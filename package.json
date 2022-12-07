@@ -4,7 +4,7 @@
   "description": "a poker game",
   "main": "index.1.1.js",
   "dependencies": {
-    "express": "^4.16.3",
+    "express": "^4.17.3",
     "express-handlebars": "^3.0.0",
     "express-hbs": "^1.0.4",
     "express-session": "^1.15.6",
